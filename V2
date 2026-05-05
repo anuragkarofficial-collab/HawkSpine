@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Popup Preview</title>
+
+  <link rel="stylesheet" href="CSS/popup.css">
+
+  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+</head>
+<body>
+
+  <!-- Popup Modal avec Glassmorphism - English Version -->
+  <div id="special-offer-popup" class="popup-overlay show" style="display: flex;">
+    <div class="popup-container">
+      <div class="popup-content">
+        <!-- Close Button -->
+        <button class="popup-close" id="popup-close" aria-label="Close">
+          <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M18 6L6 18M6 6l12 12"/>
+          </svg>
+        </button>
+        
+        <!-- Popup Content -->
+        <div class="popup-body">
+          <!-- 3D Model on the left -->
+          <div class="popup-3d-section">
+            <div class="model-container" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
+              <model-viewer
+                id="popup-hawkspine-model"
+                src="img/hawkspine-3.compressed.glb"
+                alt="3D HawkSpine"
+                camera-controls
+                auto-rotate
+                shadow-intensity="1"
+                disable-zoom
+                reveal="auto"
+                camera-orbit="45deg 70deg 3.2m"
+                field-of-view="35deg"
+                style="width: 100%; height: 100%; background: transparent;"
+              ></model-viewer>
+            </div>
+          </div>
+          
+          <!-- Pricing content on the right -->
+          <div class="popup-pricing-section">
+            <div class="pricing-content" style="max-width: 420px; overflow: visible; transform: translateY(-35px);">
+
+              <h2 class="popup-title" style="position: relative; display: inline-block; margin-top: 95px; margin-bottom: 10px; font-size: 4.0rem; line-height: 1.05;">
+                Get 20% Off
+              </h2>
+
+              <p style="margin-top: -10px; margin-bottom: 40px; font-size: 1.7rem; font-weight: 100; color: #ffffff; line-height: 1.0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;">
+                On your HawkSpine
+              </p>
+
+              <p class="popup-subtitle" style="margin-top: 0px; margin-bottom: 60px; width: 100%; max-width: 420px; font-size: 1.15rem; font-weight: 500; color: rgba(255,255,255,0.78); line-height: 1.35; white-space: normal; overflow-wrap: break-word; word-break: normal;">
+                Apply promo code "<span style="color: #0099ff; font-weight: 700;">HAWKSPINE20</span>" at<br>checkout and save <span style="color: #0099ff; font-weight: 700;">20%</span> on your HawkSpine.
+              </p>
+              
+              <div class="popup-cta" style="margin-top: 0px; margin-bottom: 30px;">
+                <a href="product.html" class="popup-buy-btn" id="buy-now-popup">
+                  Redeem Now
+                  <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M9 5l7 7-7 7"/>
+                  </svg>
+                </a>
+              </div>
+              
+              <div class="validity-text" style="margin-top: 0px; margin-bottom: 0px; transform: translateX(-120px);">
+                <span style="display: block; margin-top: 0.2rem; font-style: italic; font-family: Arial, Helvetica, sans-serif; font-weight: 200; color: rgba(255,255,255,0.72);">Offer valid until June 1, 2026</span>
+              </div>
+              
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>
