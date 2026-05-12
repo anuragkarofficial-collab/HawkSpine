@@ -1,0 +1,856 @@
+<?php
+/**
+ * HawkSpine Special Offer Popup
+ * Shows on:
+ * - Homepage: https://hawkcell.com/
+ * - French homepage: https://hawkcell.com/fr/
+ * - English page: https://hawkcell.com/product/hawkspine/
+ * - French page: https://hawkcell.com/fr/product/hawkspine/
+ * - WordPress preview / draft mode for HawkSpine page
+ */
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
+/**
+ * Detect HawkCell homepage or HawkSpine product page, including WordPress preview/draft mode.
+ */
+if ( ! function_exists( 'hawkcell_is_hawkspine_popup_page' ) ) {
+	function hawkcell_is_hawkspine_popup_page() {
+		if ( is_admin() ) {
+			return false;
+		}
+
+		if ( ! empty( $_SERVER['REQUEST_URI'] ) ) {
+			$current_path = strtolower( parse_url( $_SERVER['REQUEST_URI'], PHP_URL_PATH ) );
+			$current_path = untrailingslashit( $current_path );
+
+			if ( $current_path === '' ) {
+				$current_path = '/';
+			}
+
+			if (
+				$current_path === '/' ||
+				$current_path === '/fr' ||
+				$current_path === '/product/hawkspine' ||
+				$current_path === '/fr/product/hawkspine'
+			) {
+				return true;
+			}
+		}
+
+		if ( is_front_page() || is_home() ) {
+			return true;
+		}
+
+		if ( is_preview() ) {
+			$post_id = get_queried_object_id();
+
+			if ( $post_id ) {
+				$post = get_post( $post_id );
+
+				if ( $post ) {
+					$post_slug  = strtolower( $post->post_name );
+					$post_title = strtolower( $post->post_title );
+
+					if (
+						strpos( $post_slug, 'hawkspine' ) !== false ||
+						strpos( $post_title, 'hawkspine' ) !== false
+					) {
+						return true;
+					}
+				}
+			}
+		}
+
+		return false;
+	}
+}
+
+/**
+ * Backward-compatible function name.
+ */
+if ( ! function_exists( 'hawkcell_is_hawkspine_product_page' ) ) {
+	function hawkcell_is_hawkspine_product_page() {
+		return hawkcell_is_hawkspine_popup_page();
+	}
+}
+
+/**
+ * Detect French version.
+ */
+if ( ! function_exists( 'hawkcell_is_hawkspine_french_page' ) ) {
+	function hawkcell_is_hawkspine_french_page() {
+		if ( ! empty( $_SERVER['REQUEST_URI'] ) ) {
+			$current_path = strtolower( parse_url( $_SERVER['REQUEST_URI'], PHP_URL_PATH ) );
+
+			if ( strpos( $current_path, '/fr/' ) === 0 || $current_path === '/fr' || $current_path === '/fr/' ) {
+				return true;
+			}
+		}
+
+		if ( defined( 'ICL_LANGUAGE_CODE' ) && ICL_LANGUAGE_CODE === 'fr' ) {
+			return true;
+		}
+
+		return false;
+	}
+}
+
+/**
+ * Load popup CSS only on homepage, HawkSpine page or HawkSpine preview.
+ */
+if ( ! function_exists( 'hawkcell_hawkspine_popup_assets' ) ) {
+	function hawkcell_hawkspine_popup_assets() {
+		if ( ! hawkcell_is_hawkspine_popup_page() ) {
+			return;
+		}
+
+		wp_register_style( 'hawkspine-popup-style', false );
+		wp_enqueue_style( 'hawkspine-popup-style' );
+
+		$popup_css = '
+			#special-offer-popup.popup-overlay {
+				--hawkspine-validity-margin-top: 25px;
+				--hawkspine-validity-margin-right: 0;
+				--hawkspine-validity-margin-bottom: 0;
+				--hawkspine-validity-margin-left: 10px;
+
+				position: fixed;
+				inset: 0;
+				width: 100vw;
+				height: 100vh;
+				z-index: 999999;
+				display: none;
+				align-items: center;
+				justify-content: center;
+				padding: 1rem;
+				background: rgba(0, 0, 0, 0.6);
+				backdrop-filter: blur(8px);
+				-webkit-backdrop-filter: blur(8px);
+				opacity: 0;
+				visibility: hidden;
+				pointer-events: none;
+				transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+			}
+
+			#special-offer-popup.popup-overlay.show {
+				display: flex;
+				opacity: 1;
+				visibility: visible;
+				pointer-events: auto;
+			}
+
+			#special-offer-popup .popup-container {
+				position: relative;
+				width: 100%;
+				max-width: 900px;
+				max-height: 90vh;
+				margin: auto;
+				background: rgba(255, 255, 255, 0.08);
+				backdrop-filter: blur(20px);
+				-webkit-backdrop-filter: blur(20px);
+				border: 1px solid rgba(255, 255, 255, 0.15);
+				border-radius: 24px;
+				box-shadow:
+					0 25px 50px rgba(0, 0, 0, 0.4),
+					0 0 0 1px rgba(255, 255, 255, 0.05),
+					inset 0 1px 0 rgba(255, 255, 255, 0.1);
+				overflow: hidden;
+				transform: scale(0.9) translateY(20px);
+				transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+			}
+
+			#special-offer-popup.popup-overlay.show .popup-container {
+				transform: scale(1) translateY(0);
+			}
+
+			#special-offer-popup .popup-content {
+				position: relative;
+				width: 100%;
+				height: 100%;
+			}
+
+			#special-offer-popup .popup-close {
+				position: absolute;
+				top: 1.5rem;
+				right: 1.5rem;
+				width: 40px;
+				height: 40px;
+				background: rgba(255, 255, 255, 0.1);
+				border: 1px solid rgba(255, 255, 255, 0.2);
+				border-radius: 50%;
+				color: rgba(255, 255, 255, 0.8);
+				cursor: pointer;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				transition: all 0.3s ease;
+				z-index: 10;
+				backdrop-filter: blur(10px);
+				-webkit-backdrop-filter: blur(10px);
+				padding: 0;
+			}
+
+			#special-offer-popup .popup-close:hover {
+				background: rgba(255, 255, 255, 0.2);
+				border-color: rgba(255, 255, 255, 0.3);
+				color: #ffffff;
+				transform: scale(1.1);
+			}
+
+			#special-offer-popup .popup-body {
+				display: flex;
+				width: 100%;
+				height: 500px;
+				min-height: 500px;
+			}
+
+			#special-offer-popup .popup-3d-section {
+				flex: 0 0 50%;
+				background: linear-gradient(
+					135deg,
+					rgba(0, 153, 255, 0.05),
+					rgba(0, 153, 255, 0.02)
+				);
+				display: flex;
+				align-items: stretch;
+				justify-content: center;
+				position: relative;
+				overflow: hidden;
+			}
+
+			#special-offer-popup .model-container {
+				width: 100%;
+				height: 100%;
+				display: flex;
+				align-items: stretch;
+				justify-content: center;
+				position: relative;
+			}
+
+			#special-offer-popup .model-container img {
+				width: 100%;
+				height: 100%;
+				object-fit: cover;
+				object-position: center center;
+				display: block;
+				padding: 0;
+			}
+
+			#special-offer-popup .popup-pricing-section {
+				flex: 0 0 50%;
+				padding: 2rem 2rem;
+				display: flex;
+				flex-direction: column;
+				justify-content: center;
+				background: linear-gradient(
+					135deg,
+					rgba(255, 255, 255, 0.03),
+					rgba(255, 255, 255, 0.01)
+				);
+				overflow: hidden;
+			}
+
+			#special-offer-popup .pricing-content {
+				width: 100%;
+				max-width: 420px;
+				overflow: visible;
+				transform: translateY(-35px);
+				display: flex;
+				flex-direction: column;
+				justify-content: center;
+			}
+
+			#special-offer-popup .popup-title {
+				position: relative;
+				display: inline-block;
+				margin-top: 110px;
+				margin-bottom: 10px;
+				font-size: 4rem;
+				font-weight: 700;
+				color: #ffffff;
+				font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif;
+				letter-spacing: -0.02em;
+				line-height: 1.05;
+			}
+
+			#special-offer-popup .popup-kicker {
+				margin-top: -10px;
+				margin-bottom: 40px;
+				font-size: 1.7rem;
+				font-weight: 100;
+				color: #ffffff;
+				line-height: 1;
+				font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif;
+			}
+
+			#special-offer-popup .popup-subtitle {
+				margin-top: 0;
+				margin-bottom: 60px;
+				width: 100%;
+				max-width: 420px;
+				font-size: 1.15rem;
+				font-weight: 500;
+				color: rgba(255,255,255,0.78);
+				line-height: 1.35;
+				font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif;
+				white-space: normal;
+				overflow-wrap: break-word;
+				word-break: normal;
+			}
+
+			#special-offer-popup .popup-subtitle-mobile {
+				display: none;
+			}
+
+			#special-offer-popup .popup-highlight {
+				color: #0099ff;
+				font-weight: 700;
+			}
+
+			#special-offer-popup .popup-cta {
+				margin-top: 0;
+				margin-bottom: 15px;
+			}
+
+			#special-offer-popup .popup-buy-btn {
+				display: inline-flex;
+				align-items: center;
+				justify-content: center;
+				gap: 0.5rem;
+				background: transparent;
+				color: #ffffff;
+				padding: 1rem 2rem;
+				border: 1px solid #0099ff;
+				border-radius: 12px;
+				font-size: 1.1rem;
+				font-weight: 600;
+				text-decoration: none;
+				transition: all 0.3s ease;
+				box-shadow: 0 8px 24px rgba(0, 153, 255, 0.18);
+				font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif;
+				letter-spacing: 0.01em;
+			}
+
+			#special-offer-popup .popup-buy-btn:hover {
+				background: rgba(0, 153, 255, 0.12);
+				border-color: #00bfff;
+				transform: translateY(-2px);
+				box-shadow: 0 12px 32px rgba(0, 153, 255, 0.28);
+				color: #ffffff;
+				text-decoration: none;
+			}
+
+			#special-offer-popup .validity-text {
+				margin-top: var(--hawkspine-validity-margin-top);
+				margin-right: var(--hawkspine-validity-margin-right);
+				margin-bottom: var(--hawkspine-validity-margin-bottom);
+				margin-left: var(--hawkspine-validity-margin-left);
+				transform: translateX(-110px) translateY(-10px);
+				text-align: center;
+			}
+
+			#special-offer-popup .validity-text span {
+				display: block;
+				margin-top: 0.2rem;
+				font-style: italic;
+				font-family: Arial, Helvetica, sans-serif;
+				font-weight: 200;
+				color: rgba(255,255,255,0.72);
+				font-size: 0.85rem;
+			}
+
+			#special-offer-popup.popup-lang-fr .popup-title {
+				margin-top: 95px;
+				font-size: 2.8rem;
+			}
+
+			#special-offer-popup.popup-lang-fr .popup-subtitle {
+				max-width: 500px;
+				overflow-wrap: normal;
+				word-break: normal;
+			}
+
+			#special-offer-popup.popup-lang-fr .popup-cta {
+				margin-bottom: 10px;
+			}
+
+			#special-offer-popup.popup-lang-fr .validity-text {
+				transform: translateX(-90px);
+			}
+
+			/* Mobile only */
+			@media (max-width: 768px) {
+				#special-offer-popup.popup-overlay {
+					position: fixed !important;
+	                inset: 0 !important;
+	                width: 100vw !important;
+	                height: 100vh !important;
+	                height: 100dvh !important;
+	                padding: 8px !important;
+	                align-items: center !important;
+	                justify-content: center !important;
+	                z-index: 2147483647 !important;
+	                background: rgba(0, 0, 0, 0.6) !important;
+	                overflow: hidden !important;
+				}
+
+				#special-offer-popup.popup-overlay.show {
+					display: flex !important;
+					opacity: 1 !important;
+					visibility: visible !important;
+					pointer-events: auto !important;
+				}
+
+				#special-offer-popup .popup-container {
+					width: 100% !important;
+	                max-width: 540px !important;
+	                height: auto !important;
+	                max-height: calc(100dvh - 16px) !important;
+	                margin: 0 auto !important;
+	                border-radius: 20px !important;
+	                overflow: hidden !important;
+	                transform: scale(0.94) translateY(0) !important;
+	                transform-origin: center center !important;
+	                background: rgba(20, 24, 25, 0.96) !important;
+	                border: 1px solid rgba(255, 255, 255, 0.18) !important;
+				}
+
+				#special-offer-popup.popup-overlay.show .popup-container {
+					transform: scale(0.93) translateY(0) !important;
+				}
+
+				#special-offer-popup .popup-body {
+					display: flex !important;
+					flex-direction: column !important;
+					width: 100% !important;
+					height: auto !important;
+					min-height: 0 !important;
+					max-height: calc(100dvh - 18px) !important;
+				}
+
+				#special-offer-popup .popup-3d-section {
+					flex: none !important;
+					width: 100% !important;
+					height: 27dvh !important;
+					min-height: 165px !important;
+					max-height: 215px !important;
+					background: #eef1f2 !important;
+				}
+
+				#special-offer-popup .model-container,
+				#special-offer-popup .model-container img {
+					width: 100% !important;
+					height: 100% !important;
+				}
+
+				#special-offer-popup .model-container img {
+					object-fit: cover !important;
+					object-position: center center !important;
+					display: block !important;
+				}
+
+				#special-offer-popup .popup-pricing-section {
+					flex: none !important;
+					width: 100% !important;
+					padding: 22px 24px 22px !important;
+					background: linear-gradient(180deg, #222829 0%, #151818 100%) !important;
+					overflow: visible !important;
+				}
+
+				#special-offer-popup .pricing-content {
+					width: 100% !important;
+					max-width: 100% !important;
+					transform: none !important;
+					display: flex !important;
+					flex-direction: column !important;
+				}
+
+				#special-offer-popup .popup-title,
+				#special-offer-popup.popup-lang-fr .popup-title {
+					margin: 0 0 2px !important;
+					font-size: clamp(34px, 7.8vw, 46px) !important;
+					line-height: 1.02 !important;
+					letter-spacing: -0.04em !important;
+				}
+
+				#special-offer-popup .popup-kicker {
+					margin: 0 0 22px !important;
+					font-size: clamp(20px, 5.2vw, 26px) !important;
+					line-height: 1.1 !important;
+					font-weight: 300 !important;
+				}
+
+				#special-offer-popup .popup-subtitle-desktop {
+					display: none !important;
+				}
+
+				#special-offer-popup .popup-subtitle-mobile {
+					display: block !important;
+				}
+
+				#special-offer-popup .popup-subtitle,
+				#special-offer-popup.popup-lang-fr .popup-subtitle {
+					margin: 0 0 26px !important;
+					max-width: 100% !important;
+					font-size: clamp(15px, 4vw, 19px) !important;
+					line-height: 1.28 !important;
+					font-weight: 600 !important;
+					color: rgba(255,255,255,0.78) !important;
+					white-space: normal !important;
+					overflow-wrap: normal !important;
+					word-break: keep-all !important;
+				}
+
+				#special-offer-popup.popup-lang-fr .popup-subtitle {
+					font-size: clamp(14px, 3.75vw, 17px) !important;
+					line-height: 1.28 !important;
+				}
+
+				#special-offer-popup .popup-subtitle .promo-line {
+					display: block !important;
+					white-space: nowrap !important;
+				}
+
+				#special-offer-popup .popup-subtitle .promo-code-nowrap {
+					white-space: nowrap !important;
+				}
+
+				#special-offer-popup .popup-cta {
+					margin: 0 0 20px !important;
+				}
+
+				#special-offer-popup .popup-buy-btn {
+					width: 100% !important;
+					min-height: 56px !important;
+					padding: 0 20px !important;
+					border-radius: 15px !important;
+					font-size: 18px !important;
+					font-weight: 700 !important;
+					border: 2px solid #0099ff !important;
+					box-shadow: none !important;
+				}
+
+				#special-offer-popup .validity-text,
+				#special-offer-popup.popup-lang-fr .validity-text {
+					margin: 0 !important;
+					transform: none !important;
+					text-align: center !important;
+				}
+
+				#special-offer-popup .validity-text span {
+					font-size: 14px !important;
+					line-height: 1.3 !important;
+					font-weight: 400 !important;
+					color: rgba(255,255,255,0.78) !important;
+				}
+
+				#special-offer-popup .popup-close {
+					top: 14px !important;
+					right: 14px !important;
+					width: 44px !important;
+					height: 44px !important;
+					z-index: 20 !important;
+					background: rgba(255,255,255,0.14) !important;
+					border: 1px solid rgba(255,255,255,0.24) !important;
+				}
+			}
+
+			@media (max-width: 480px) {
+				#special-offer-popup.popup-overlay {
+					padding: 6px !important;
+	                align-items: center !important;
+				}
+
+				#special-offer-popup .popup-container {
+					width: 100% !important;
+					max-height: calc(100dvh - 12px) !important;
+					border-radius: 18px !important;
+					transform: scale(0.93) translateY(0) !important;
+					transform-origin: center center !important;
+				}
+
+				#special-offer-popup.popup-overlay.show .popup-container {
+					transform: scale(0.94) translateY(0) !important;
+				}
+
+				#special-offer-popup .popup-body {
+					max-height: calc(100dvh - 14px) !important;
+				}
+
+				#special-offer-popup .popup-3d-section {
+					height: 25dvh !important;
+					min-height: 150px !important;
+					max-height: 190px !important;
+				}
+
+				#special-offer-popup .popup-pricing-section {
+					padding: 20px 20px 20px !important;
+				}
+
+				#special-offer-popup .popup-title,
+				#special-offer-popup.popup-lang-fr .popup-title {
+					font-size: clamp(31px, 8.4vw, 40px) !important;
+				}
+
+				#special-offer-popup .popup-kicker {
+					font-size: clamp(19px, 5.4vw, 24px) !important;
+					margin-bottom: 20px !important;
+				}
+
+				#special-offer-popup .popup-subtitle,
+				#special-offer-popup.popup-lang-fr .popup-subtitle {
+					font-size: clamp(14px, 4.05vw, 17px) !important;
+					line-height: 1.27 !important;
+					margin-bottom: 24px !important;
+				}
+
+				#special-offer-popup.popup-lang-fr .popup-subtitle {
+					font-size: clamp(13px, 3.7vw, 15.5px) !important;
+					line-height: 1.27 !important;
+				}
+
+				#special-offer-popup .popup-buy-btn {
+					min-height: 54px !important;
+					font-size: 17px !important;
+					border-radius: 14px !important;
+				}
+
+				#special-offer-popup .popup-cta {
+					margin-bottom: 18px !important;
+				}
+
+				#special-offer-popup .validity-text span {
+					font-size: 13px !important;
+				}
+
+				#special-offer-popup .popup-close {
+					top: 12px !important;
+					right: 12px !important;
+					width: 42px !important;
+					height: 42px !important;
+				}
+			}
+
+			@media (max-width: 380px) {
+				#special-offer-popup .popup-container {
+					transform: scale(0.91) translateY(0) !important;
+				}
+
+				#special-offer-popup.popup-overlay.show .popup-container {
+					transform: scale(0.91) translateY(0) !important;
+				}
+
+				#special-offer-popup .popup-3d-section {
+					height: 23dvh !important;
+					min-height: 135px !important;
+					max-height: 170px !important;
+				}
+
+				#special-offer-popup .popup-pricing-section {
+					padding: 17px 18px 17px !important;
+				}
+
+				#special-offer-popup .popup-title,
+				#special-offer-popup.popup-lang-fr .popup-title {
+					font-size: 30px !important;
+				}
+
+				#special-offer-popup .popup-kicker {
+					font-size: 18px !important;
+					margin-bottom: 16px !important;
+				}
+
+				#special-offer-popup .popup-subtitle,
+				#special-offer-popup.popup-lang-fr .popup-subtitle {
+					font-size: 13px !important;
+					margin-bottom: 18px !important;
+				}
+
+				#special-offer-popup.popup-lang-fr .popup-subtitle {
+					font-size: 12.5px !important;
+				}
+
+				#special-offer-popup .popup-buy-btn {
+					min-height: 50px !important;
+					font-size: 16px !important;
+				}
+
+				#special-offer-popup .popup-cta {
+					margin-bottom: 16px !important;
+				}
+
+				#special-offer-popup .validity-text span {
+					font-size: 12px !important;
+				}
+			}
+		';
+
+		wp_add_inline_style( 'hawkspine-popup-style', $popup_css );
+	}
+}
+add_action( 'wp_enqueue_scripts', 'hawkcell_hawkspine_popup_assets' );
+
+/**
+ * Popup HTML + JS.
+ */
+if ( ! function_exists( 'hawkcell_hawkspine_popup_markup' ) ) {
+	function hawkcell_hawkspine_popup_markup() {
+		if ( ! hawkcell_is_hawkspine_popup_page() ) {
+			return;
+		}
+
+		$is_french = hawkcell_is_hawkspine_french_page();
+
+		$hawkspine_visual_url = 'https://hawkcell.com/wp-content/uploads/2026/05/HAWKCELL-HAWKSPINE-2.png';
+
+		if ( $is_french ) {
+			$popup_lang_class     = 'popup-lang-fr';
+			$close_label          = 'Fermer';
+			$title                = 'Profitez de -20%';
+			$kicker               = 'sur votre HawkSpine';
+			$subtitle_desktop     = 'Appliquez le code promo "<span class="popup-highlight">HAWKSPINE20</span>"<br>au paiement et économisez <span class="popup-highlight">20%</span><br>sur votre HawkSpine.';
+			$subtitle_mobile      = '<span class="promo-line">Appliquez le code promo</span><span class="promo-line"><span class="promo-code-nowrap">"<span class="popup-highlight">HAWKSPINE20</span>"</span> au paiement</span><span class="promo-line">et économisez <span class="popup-highlight">20%</span> sur votre HawkSpine.</span>';
+			$button_text          = 'J’en profite';
+			$button_url           = 'https://hawkspine.hawkcell.com/stripefr.html';
+			$validity             = 'Offre valable jusqu’au 31 mai 2026';
+		} else {
+			$popup_lang_class     = 'popup-lang-en';
+			$close_label          = 'Close';
+			$title                = 'Get 20% Off';
+			$kicker               = 'on your HawkSpine';
+			$subtitle_desktop     = 'Apply promo code "<span class="popup-highlight">HAWKSPINE20</span>" at<br>checkout and save <span class="popup-highlight">20%</span> on your HawkSpine.';
+			$subtitle_mobile      = '<span class="promo-line">Apply promo code <span class="promo-code-nowrap">"<span class="popup-highlight">HAWKSPINE20</span>"</span> at</span><span class="promo-line">checkout and save <span class="popup-highlight">20%</span> on your</span><span class="promo-line">HawkSpine.</span>';
+			$button_text          = 'Redeem Now';
+			$button_url           = 'https://hawkspine.hawkcell.com/stripe';
+			$validity             = 'Offer valid until May 31, 2026';
+		}
+		?>
+
+		<!-- HawkSpine Popup Modal -->
+		<div id="special-offer-popup" class="popup-overlay <?php echo esc_attr( $popup_lang_class ); ?>" aria-hidden="true">
+			<div class="popup-container" role="dialog" aria-modal="true" aria-labelledby="hawkspine-popup-title">
+				<div class="popup-content">
+
+					<button class="popup-close" id="popup-close" aria-label="<?php echo esc_attr( $close_label ); ?>">
+						<svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+							<path d="M18 6L6 18M6 6l12 12"/>
+						</svg>
+					</button>
+
+					<div class="popup-body">
+
+						<div class="popup-3d-section">
+							<div class="model-container">
+								<img
+									src="<?php echo esc_url( $hawkspine_visual_url ); ?>"
+									alt="HawkSpine"
+									loading="eager"
+								>
+							</div>
+						</div>
+
+						<div class="popup-pricing-section">
+							<div class="pricing-content">
+
+								<h2 class="popup-title" id="hawkspine-popup-title">
+									<?php echo esc_html( $title ); ?>
+								</h2>
+
+								<p class="popup-kicker">
+									<?php echo esc_html( $kicker ); ?>
+								</p>
+
+								<p class="popup-subtitle popup-subtitle-desktop">
+									<?php echo wp_kses_post( $subtitle_desktop ); ?>
+								</p>
+
+								<p class="popup-subtitle popup-subtitle-mobile">
+									<?php echo wp_kses_post( $subtitle_mobile ); ?>
+								</p>
+
+								<div class="popup-cta">
+									<a href="<?php echo esc_url( $button_url ); ?>" class="popup-buy-btn" id="buy-now-popup">
+										<?php echo esc_html( $button_text ); ?>
+										<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+											<path d="M9 5l7 7-7 7"/>
+										</svg>
+									</a>
+								</div>
+
+								<div class="validity-text">
+									<span><?php echo esc_html( $validity ); ?></span>
+								</div>
+
+							</div>
+						</div>
+
+					</div>
+
+				</div>
+			</div>
+		</div>
+
+		<script>
+			(function () {
+				function initHawkSpinePopup() {
+					const popup = document.getElementById('special-offer-popup');
+					const closeButton = document.getElementById('popup-close');
+
+					if (!popup) {
+						return;
+					}
+
+					function closePopup() {
+						popup.classList.remove('show');
+						popup.setAttribute('aria-hidden', 'true');
+
+						setTimeout(function () {
+							if (!popup.classList.contains('show')) {
+								popup.style.display = 'none';
+							}
+						}, 400);
+					}
+
+					function openPopup() {
+						popup.style.display = 'flex';
+
+						requestAnimationFrame(function () {
+							popup.classList.add('show');
+							popup.setAttribute('aria-hidden', 'false');
+						});
+					}
+
+					setTimeout(openPopup, 6000);
+
+					popup.addEventListener('click', function (event) {
+						if (event.target === popup) {
+							closePopup();
+						}
+					});
+
+					if (closeButton) {
+						closeButton.addEventListener('click', closePopup);
+					}
+
+					document.addEventListener('keydown', function (event) {
+						if (event.key === 'Escape' && popup.classList.contains('show')) {
+							closePopup();
+						}
+					});
+				}
+
+				if (document.readyState === 'loading') {
+					document.addEventListener('DOMContentLoaded', initHawkSpinePopup);
+				} else {
+					initHawkSpinePopup();
+				}
+			})();
+		</script>
+
+		<?php
+	}
+}
+add_action( 'wp_footer', 'hawkcell_hawkspine_popup_markup' );
